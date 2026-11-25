@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { groupByMonth, lastMonths, removeNote, normalize, mergeNotes, monthlyTotals, priceHistory, products, toBackup, parseBackup } from './lib.js';
+import { groupByMonth, lastMonths, removeNote, sortProducts, priceStats, normalize, mergeNotes, monthlyTotals, priceHistory, products, toBackup, parseBackup } from './lib.js';
 
 const K = (d) => '4226111234567800019065001000001234100001234' + d;
 const loja = { nome: 'MERCADO A', cnpj: '11.111.111/0001-11' };
@@ -97,4 +97,21 @@ test('products carries the unit of the last purchase', () => {
 test('removeNote drops only that chave', () => {
   const a = nota('1', '2026-11-01T10:00:00-03:00', []), b = nota('2', '2026-11-02T10:00:00-03:00', []);
   assert.deepEqual(removeNote([a, b], a.chave), [b]);
+});
+
+test('sortProducts orders by count, rise or fall', () => {
+  const list = [
+    { label: 'A', count: 1, first: 100, last: 100 },
+    { label: 'B', count: 5, first: 100, last: 120 },
+    { label: 'C', count: 3, first: 100, last: 80 },
+    { label: 'D', count: 2, first: 100, last: 150 },
+  ];
+  assert.deepEqual(sortProducts(list, 'comprados').map((p) => p.label), ['B', 'C', 'D', 'A']);
+  assert.deepEqual(sortProducts(list, 'altas').map((p) => p.label), ['D', 'B']);
+  assert.deepEqual(sortProducts(list, 'quedas').map((p) => p.label), ['C']);
+});
+
+test('priceStats gives min, max with dates and the rounded average', () => {
+  const s = priceStats([{ date: 'd1', valorUnit: 500 }, { date: 'd2', valorUnit: 700 }, { date: 'd3', valorUnit: 601 }]);
+  assert.deepEqual(s, { min: { date: 'd1', valorUnit: 500 }, max: { date: 'd2', valorUnit: 700 }, avg: 600 });
 });

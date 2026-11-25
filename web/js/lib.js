@@ -59,7 +59,26 @@ export function lastMonths(totals, current, count) {
   return out;
 }
 
-export const removeNote = (notes, chave) => notes.filter((n) => n.chave !== chave);
+const ratio = (p) => (p.last - p.first) / (p.first || 1);
+
+// 'comprados': most bought first; 'altas' / 'quedas': only products whose price went up / down.
+export function sortProducts(list, mode) {
+  if (mode === 'altas') return list.filter((p) => p.last > p.first).sort((a, b) => ratio(b) - ratio(a));
+  if (mode === 'quedas') return list.filter((p) => p.last < p.first).sort((a, b) => ratio(a) - ratio(b));
+  return [...list].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+}
+
+export function priceStats(hist) {
+  let min = hist[0], max = hist[0], sum = 0;
+  for (const h of hist) {
+    if (h.valorUnit < min.valorUnit) min = h;
+    if (h.valorUnit > max.valorUnit) max = h;
+    sum += h.valorUnit;
+  }
+  return { min, max, avg: Math.round(sum / hist.length) };
+}
+
+export const removeNote =(notes, chave) => notes.filter((n) => n.chave !== chave);
 
 export function groupByMonth(notes) {
   const map = new Map();

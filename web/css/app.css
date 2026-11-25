@@ -299,6 +299,64 @@ dialog::backdrop { background: rgb(0 0 0 / .45); }
 .sheet p { color: var(--muted); }
 .sheet .status { color: var(--ink); font-weight: 600; min-height: 1.5em; }
 
+/* ---------- Ordem (Preços) ---------- */
+.ordem { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -20px; padding: 0 20px; }
+.ordem button {
+  flex: none; min-height: 40px; padding: 0 16px; border-radius: 999px;
+  border: 2px solid var(--line); background: transparent; color: var(--ink);
+  font: 600 .9375rem var(--body); cursor: pointer;
+}
+.ordem button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--shelf); }
+
+/* ---------- Produto: menor, média, maior ---------- */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0 0 22px; background: var(--paper); border-radius: 14px; }
+.stats div { padding: 14px 14px 12px; }
+.stats div + div { border-left: 1px dashed var(--line); }
+.stats dt { font-size: .875rem; color: var(--muted); font-weight: 600; }
+.stats dd { margin: 2px 0 0; font: 700 1.375rem var(--cond); font-variant-numeric: tabular-nums; }
+.stats dd.stats-data { font: 400 .8125rem var(--body); color: var(--muted); }
+
+/* ---------- Toast ---------- */
+#toast {
+  position: fixed; z-index: 20; left: 50%; bottom: calc(var(--tabs-h) + env(safe-area-inset-bottom) + 14px);
+  display: flex; align-items: center; gap: 16px; width: min(100% - 32px, 26rem); padding: 6px 6px 6px 18px;
+  background: var(--ink); color: var(--shelf); border-radius: 12px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / .22); /* floats over the content */
+  transform: translate(-50%, 140%); opacity: 0; pointer-events: none;
+  transition: transform .25s cubic-bezier(.2, .7, .2, 1), opacity .2s;
+}
+#toast.is-on { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+#toast span { flex: 1; font-weight: 600; }
+#toast button {
+  min-height: 44px; padding: 0 14px; border: 0; border-radius: 8px;
+  background: var(--tag); color: var(--tag-ink); font: 700 1rem var(--body); cursor: pointer;
+}
+
+/* ---------- Feedback ---------- */
+.nota summary:hover, .produtos a:hover { background: color-mix(in srgb, var(--tag) 14%, var(--paper)); }
+.btn:hover { filter: brightness(1.08); }
+.btn-ghost:hover { background: color-mix(in srgb, var(--ink) 6%, transparent); filter: none; }
+
+/* ---------- Wide screens: tabs move to the top ---------- */
+@media (min-width: 900px) {
+  body { display: flex; flex-direction: column; padding-bottom: 0; }
+  .top { order: 0; width: 100%; }
+  .tabs {
+    order: 1; position: sticky; top: 0; inset: auto; height: auto;
+    display: flex; justify-content: center; gap: 6px; padding: 8px 12px;
+    border-top: 0; border-bottom: 1px solid var(--line);
+  }
+  .tabs a { flex-direction: row; align-items: center; gap: 8px; height: 46px; padding: 0 18px; border-radius: 10px; font-size: 1rem; }
+  .tabs a svg { width: 22px; height: 22px; }
+  .tabs a[aria-current="page"] { background: var(--shelf); }
+  .tab-ler { padding: 0 18px !important; }
+  .meses .chart { max-height: 180px; }
+  .ler-disc { width: 30px; height: 30px; margin: 0; box-shadow: none; }
+  .ler-disc svg { width: 20px !important; height: 20px !important; }
+  main { order: 2; width: 100%; padding-top: 28px; }
+  #toast { bottom: 24px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }

@@ -1,4 +1,4 @@
-import { groupByMonth, lastMonths, removeNote, normalize, mergeNotes, monthlyTotals, priceHistory, products, toBackup, parseBackup } from './lib.js';
+import { groupByMonth, lastMonths, removeNote, sortProducts, priceStats, normalize, mergeNotes, monthlyTotals, priceHistory, products, toBackup, parseBackup } from './lib.js';
 import { chaveFromUrl, parseNota } from './parse.js';
 import { getAll, putMany, removeOne } from './db.js';
 import { startCamera, stopCamera, scanImageFile } from './scan.js';
@@ -69,14 +69,16 @@ function renderNotas() {
   if (prev.total > 0) {
     const diff = cur - prev.total;
     const name = fMonthOnly.format(monthDate(prev.month));
-    compare = diff === 0 ? `Igual a ${name}.` : `${money(Math.abs(diff))} ${diff < 0 ? 'a menos' : 'a mais'} que em ${name}.`;
+    // Spending more is the bad direction: red; less is green.
+    compare = diff === 0 ? `<p class="resumo-compara">Igual a ${name}.</p>`
+      : `<p class="resumo-compara ${diff > 0 ? 'up' : 'down'}">${money(Math.abs(diff))} ${diff < 0 ? 'a menos' : 'a mais'} que em ${name}.</p>`;
   }
   const byMonth = groupByMonth(notes);
   view.innerHTML = `
     <section class="resumo">
       <h1>Gasto em ${esc(fMonthOnly.format(monthDate(now)))}</h1>
       ${tag(cur, 'tag-xl')}
-      ${compare ? `<p class="resumo-compara">${compare}</p>` : ''}
+      ${compare}
       <figure class="meses"><figcaption class="visually-hidden">Gasto nos últimos 6 meses</figcaption></figure>
     </section>
     ${totals.map(({ month, total }) => `
@@ -94,13 +96,54 @@ function renderNotas() {
           </details>`).join('')}
       </section>`).join('')}`;
   $('.meses', view).append(monthBars(months, money, (ym) => fMonthShort.format(monthDate(ym)).replace('.', '')));
+  countUp($('.tag-xl', view), cur);
   view.querySelectorAll('.apagar').forEach((b) => b.addEventListener('click', async () => {
     const n = notes.find((x) => x.chave === b.dataset.chave);
-    if (!n || !confirm(`Apagar a nota de ${n.loja.nome} de ${fDayTime.format(new Date(n.emitidaEm))}? Isso não pode ser desfeito.`)) return;
+    if (!n) return;
     await removeOne(n.chave);
     notes = removeNote(notes, n.chave);
     renderNotas();
+    toast(`Nota de ${n.loja.nome} apagada.`, 'Desfazer', async () => {
+      await putMany([n]);
+      notes = mergeNotes(notes, [n]);
+      route();
+    });
   }));
+}
+
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+// The month total counts up once when the screen opens, like a till adding up.
+function countUp(el, cents) {
+  if (!el || reduceMotion.matches || cents === 0) return;
+  const intEl = $('.tag-int', el), decEl = $('.tag-dec', el);
+  const t0 = performance.now(), dur = 650;
+  const frame = (t) => {
+    const k = Math.min(1, (t - t0) / dur);
+    const v = Math.round(cents * (1 - (1 - k) ** 3));
+    intEl.textContent = Math.floor(v / 100).toLocaleString('pt-BR');
+    decEl.textContent = ',' + String(v % 100).padStart(2, '0'); // taste-skill-ignore: cents of a price
+    if (k < 1) requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+
+// One message at a time at the bottom, with an optional action (e.g. undo).
+let toastTimer = 0;
+function toast(msg, actionLabel, onAction) {
+  let box = $('#toast');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'toast';
+    box.setAttribute('role', 'status');
+    document.body.append(box);
+  }
+  box.innerHTML = `<span>${esc(msg)}</span>${actionLabel ? `<button type="button">${esc(actionLabel)}</button>` : ''}`;
+  box.classList.add('is-on');
+  const hide = () => box.classList.remove('is-on');
+  $('button', box)?.addEventListener('click', () => { hide(); onAction(); }, { once: true });
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hide, 6000);
 }
 
 // ---------- Ler nota ----------
@@ -142,6 +185,7 @@ function renderLer() {
 // opens it, copies the page and pastes it back here.
 function lido(url) {
   stopCamera(); // a photo can be picked while the live camera is still running
+  navigator.vibrate?.(40);
   const chave = chaveFromUrl(url);
   if (!chave) {
     view.innerHTML = `
@@ -224,8 +268,12 @@ async function salvar(nota) {
 }
 
 // ---------- Preços ----------
+const ORDENS = [['comprados', 'Mais comprados'], ['altas', 'Maiores altas'], ['quedas', 'Maiores quedas']];
+const VAZIO_ORDEM = { comprados: 'Nenhum produto com esse nome.', altas: 'Nenhum produto subiu de preço até agora.', quedas: 'Nenhum produto ficou mais barato até agora.' };
+let ordem = 'comprados';
+
 function renderPrecos() {
-  const list = products(notes).sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+  const list = products(notes);
   if (!list.length) {
     view.innerHTML = `<section class="vazio"><h1>Nenhum preço ainda</h1><p>Depois que você ler algumas notas, cada produto aparece aqui com o quanto o preço mudou.</p><a class="btn" href="#ler">Ler uma nota</a></section>`;
     return;
@@ -235,12 +283,16 @@ function renderPrecos() {
       <h1>Preços</h1>
       <label class="busca"><span class="visually-hidden">Buscar produto</span>
         <input type="search" placeholder="Buscar produto" autocomplete="off"></label>
+      <div class="ordem" role="group" aria-label="Ordenar">
+        ${ORDENS.map(([id, label]) => `<button type="button" data-ordem="${id}" aria-pressed="${id === ordem}">${label}</button>`).join('')}
+      </div>
       <ul class="produtos"></ul>
       <p class="status" role="status"></p>
     </section>`;
   const ul = $('.produtos', view);
+  const input = $('input', view);
   const draw = (q) => {
-    const shown = list.filter((p) => p.descNorm.includes(normalize(q)));
+    const shown = sortProducts(list, ordem).filter((p) => p.descNorm.includes(normalize(q)));
     ul.innerHTML = shown.map((p) => `
       <li><a href="${productHref(p.cnpj, p.descNorm)}">
         <span class="prod-nome">${esc(p.label)}</span>
@@ -248,9 +300,14 @@ function renderPrecos() {
         <span class="preco">${tag(p.last, 'tag-sm')}${perUnit(p.unidade)}</span>
         ${p.count > 1 ? change(p.first, p.last) : '<span class="chip">1 compra</span>'}
       </a></li>`).join('');
-    $('.status', view).textContent = shown.length ? '' : 'Nenhum produto com esse nome.';
+    $('.status', view).textContent = shown.length ? '' : (input.value ? 'Nenhum produto com esse nome.' : VAZIO_ORDEM[ordem]);
   };
-  $('input', view).oninput = (e) => draw(e.target.value);
+  input.oninput = () => draw(input.value);
+  view.querySelectorAll('.ordem button').forEach((b) => b.addEventListener('click', () => {
+    ordem = b.dataset.ordem;
+    view.querySelectorAll('.ordem button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    draw(input.value);
+  }));
   draw('');
 }
 
@@ -274,6 +331,14 @@ function renderProduto(cnpj, descNorm) {
       <p class="prod-loja">${esc(p.loja)}</p>
       <div class="produto-preco"><span class="preco">${tag(last.valorUnit, 'tag-lg')}${perUnit(p.unidade)}</span><p class="produto-resumo ${r > 0 ? 'up' : r < 0 ? 'down' : ''}">${resumo}</p></div>
       <figure class="grafico"></figure>
+      ${hist.length > 1 ? (() => {
+        const s = priceStats(hist);
+        return `<dl class="stats">
+          <div><dt>Menor</dt><dd>${money(s.min.valorUnit)}</dd><dd class="stats-data">${fDay.format(new Date(s.min.date))}</dd></div>
+          <div><dt>Média</dt><dd>${money(s.avg)}</dd><dd class="stats-data">${hist.length} compras</dd></div>
+          <div><dt>Maior</dt><dd>${money(s.max.valorUnit)}</dd><dd class="stats-data">${fDay.format(new Date(s.max.date))}</dd></div>
+        </dl>`;
+      })() : ''}
       <h2>Compras</h2>
       <ul class="compras">${[...hist].reverse().map((h) => `<li><span>${fDay.format(new Date(h.date))}</span><span>${money(h.valorUnit)}</span></li>`).join('')}</ul>
     </section>`;
