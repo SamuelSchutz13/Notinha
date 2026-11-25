@@ -16,6 +16,10 @@ func main() {
 		port = "8080"
 	}
 	client := &http.Client{Timeout: 10 * time.Second}
+	if os.Getenv("NOTINHA_DEV_FIXTURE") == "1" {
+		client.Transport = fixtureTransport("internal/nfce/testdata/sc_exemplo.html")
+		log.Print("modo dev: toda nota devolve a página de exemplo")
+	}
 	log.Printf("Notinha em http://localhost:%s", port)
 	// No request logging: note URLs and contents must never be recorded.
 	log.Fatal(http.ListenAndServe(":"+port, newServer(client, allowedHosts)))
