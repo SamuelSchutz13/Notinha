@@ -171,15 +171,6 @@ main:focus, main:focus-visible { outline: none; } /* focused only to move screen
 .nota-total { grid-row: 1 / 3; grid-column: 2; align-self: center; font: 700 1.375rem var(--cond); font-variant-numeric: tabular-nums; }
 .nota[open] summary { border-bottom: 1px dashed var(--line); }
 
-.itens { list-style: none; margin: 0; padding: 6px 0 10px; }
-.itens a {
-  display: grid; grid-template-columns: 1fr auto; gap: 0 14px;
-  padding: 9px 16px; text-decoration: none;
-}
-.itens a:hover { background: color-mix(in srgb, var(--tag) 22%, transparent); }
-.item-nome { font-weight: 600; font-size: .9375rem; }
-.item-qtd { grid-row: 2; font-size: .875rem; color: var(--muted); font-variant-numeric: tabular-nums; }
-.item-total { grid-row: 1 / 3; grid-column: 2; align-self: center; font-variant-numeric: tabular-nums; font-weight: 600; }
 
 /* ---------- Empty ---------- */
 .vazio { display: grid; justify-items: center; text-align: center; gap: 14px; padding: 48px 8px; }
@@ -241,11 +232,38 @@ main:focus, main:focus-visible { outline: none; } /* focused only to move screen
 .lida-aviso { font-weight: 600; text-align: center; padding-top: 6px; }
 .cupom { margin-bottom: 26px; animation: imprime .5s cubic-bezier(.2, .7, .2, 1); transform-origin: top; }
 @keyframes imprime { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 -20px 0); } }
-.cupom header { padding: 22px 16px 14px; text-align: center; border-bottom: 1px dashed var(--line); }
-.cupom header h1 { font-size: 1.375rem; margin-bottom: 6px; }
-.cupom header p { color: var(--muted); font-size: .9375rem; }
-.cupom footer { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px 22px; border-top: 1px dashed var(--line); font-weight: 600; }
 .acoes { display: grid; gap: 10px; }
+
+/* ---------- Recibo: the printed NFC-e, reproduced as the thermal printer sets it ---------- */
+.recibo {
+  max-width: 30rem; margin: 0 auto; padding: 20px 16px 18px;
+  font: 400 .8125rem/1.5 ui-monospace, 'Cascadia Mono', Consolas, 'Courier New', monospace; /* the receipt's own face */
+  text-transform: uppercase; color: var(--ink); font-variant-numeric: tabular-nums;
+}
+.recibo p { margin: 0; }
+.r-cab { text-align: center; padding-bottom: 12px; }
+.r-loja { font-weight: 700; font-size: .9375rem; }
+.r-doc { margin-top: 6px !important; font-size: .75rem; color: var(--muted); text-transform: none; }
+.r-colunas, .r-tot, .r-info { border-top: 1px dashed var(--line); }
+.r-colunas { display: grid; grid-template-columns: 4ch 1fr auto; gap: 0 8px; padding: 8px 0 4px; font-size: .75rem; color: var(--muted); }
+.r-itens { list-style: none; margin: 0; padding: 0 0 8px; }
+.r-itens a {
+  display: grid; grid-template-columns: 4ch 1fr auto; gap: 0 8px;
+  padding: 5px 4px; margin: 0 -4px; text-decoration: none; border-radius: 4px;
+}
+.r-itens a:hover { background: color-mix(in srgb, var(--tag) 26%, transparent); }
+.r-n { color: var(--muted); }
+.r-desc { grid-column: 2; }
+.r-qtd { grid-column: 2; grid-row: 2; color: var(--muted); font-size: .75rem; }
+.r-vl { grid-column: 3; grid-row: 1; text-align: right; }
+.r-tot { margin: 0; padding: 8px 0; }
+.r-tot div { display: flex; justify-content: space-between; gap: 12px; }
+.r-tot dd { margin: 0; }
+.r-pagar { font-weight: 700; font-size: .9375rem; margin-top: 2px; }
+.r-info { padding-top: 8px; text-align: center; }
+.r-chave { font-size: .75rem; word-spacing: .2em; }
+.r-aviso { margin-top: 12px !important; text-align: center; font-size: .6875rem; color: var(--muted); text-transform: none; }
+.nota[open] .recibo { animation: imprime .45s cubic-bezier(.2, .7, .2, 1); }
 
 /* ---------- Preços ---------- */
 .precos { display: grid; gap: 16px; padding-top: 14px; }
@@ -360,3 +378,4 @@ dialog::backdrop { background: rgb(0 0 0 / .45); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+@media (prefers-color-scheme: dark) { .r-itens a:hover { background: color-mix(in srgb, var(--tag) 12%, transparent); } }

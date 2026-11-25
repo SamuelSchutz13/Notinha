@@ -39,13 +39,43 @@ function change(first, last) {
 
 const productHref = (cnpj, descNorm) => `#produto/${encodeURIComponent(cnpj)}/${encodeURIComponent(descNorm)}`;
 
-function itemsList(n) {
-  return `<ul class="itens">${n.itens.map((it) => `
-    <li><a href="${productHref(n.loja.cnpj, normalize(it.descricao))}">
-      <span class="item-nome">${esc(it.descricao)}</span>
-      <span class="item-qtd">${esc(String(it.qtd).replace('.', ','))} ${esc(it.unidade)} × ${money(it.valorUnit)}</span>
-      <span class="item-total">${money(it.valorTotal)}</span>
-    </a></li>`).join('')}</ul>`;
+// ---------- The note drawn as the printed NFC-e (DANFE) the store hands over ----------
+const num = (cents) => (cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// emitidaEm is already Brasília time ("2026-11-25T10:42:17-03:00"): print it as the receipt does.
+const dataHora = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)} ${iso.slice(11, 19)}`;
+
+function recibo(n) {
+  const soma = n.itens.reduce((s, i) => s + i.valorTotal, 0);
+  const desconto = soma - n.total;
+  return `
+    <div class="recibo" data-ui>
+      <header class="r-cab">
+        <p class="r-loja">${esc(n.loja.nome)}</p>
+        <p>CNPJ: ${esc(n.loja.cnpj)}</p>
+        <p class="r-doc">Documento Auxiliar da Nota Fiscal de Consumidor Eletrônica</p>
+      </header>
+      <p class="r-colunas" aria-hidden="true"><span>#</span><span>Descrição</span><span>Vl total</span></p>
+      <ol class="r-itens">${n.itens.map((it, i) => `
+        <li><a href="${productHref(n.loja.cnpj, normalize(it.descricao))}">
+          <span class="r-n">${String(i + 1).padStart(3, '0')}</span>
+          <span class="r-desc">${esc(it.descricao)}</span>
+          <span class="r-qtd">${it.codigo ? `Cód. ${esc(it.codigo)} · ` : ''}${esc(String(it.qtd).replace('.', ','))} ${esc(it.unidade)} × ${num(it.valorUnit)}</span>
+          <span class="r-vl">${num(it.valorTotal)}</span>
+        </a></li>`).join('')}
+      </ol>
+      <dl class="r-tot">
+        <div><dt>Qtd. total de itens</dt><dd>${n.itens.length}</dd></div>
+        <div><dt>Valor total R$</dt><dd>${num(soma)}</dd></div>
+        ${desconto > 0 ? `<div><dt>Descontos R$</dt><dd>${num(desconto)}</dd></div>` : ''}
+        <div class="r-pagar"><dt>Valor a pagar R$</dt><dd>${num(n.total)}</dd></div>
+      </dl>
+      <div class="r-info">
+        <p>Emissão: ${dataHora(n.emitidaEm)}</p>
+        <p>Chave de acesso</p>
+        <p class="r-chave">${n.chave.match(/.{4}/g).join(' ')}</p>
+      </div>
+      <p class="r-aviso">Reprodução no Notinha. Não é documento fiscal.</p>
+    </div>`;
 }
 
 // ---------- Notas ----------
@@ -91,7 +121,7 @@ function renderNotas() {
               <span class="nota-meta">${fDayTime.format(new Date(n.emitidaEm))}, ${n.itens.length} ${n.itens.length === 1 ? 'item' : 'itens'}</span>
               <span class="nota-total">${money(n.total)}</span>
             </summary>
-            ${itemsList(n)}
+            ${recibo(n)}
             <button class="apagar" type="button" data-chave="${esc(n.chave)}">Apagar esta nota</button>
           </details>`).join('')}
       </section>`).join('')}`;
@@ -250,15 +280,8 @@ async function salvar(nota) {
   view.innerHTML = `
     <section class="lida">
       <p class="lida-aviso" role="status">${existed ? 'Essa nota já estava salva. Nada foi duplicado.' : 'Nota salva.'}</p>
-      <article class="cupom">
-        <header>
-          <h1>${esc(nota.loja.nome)}</h1>
-          <p>CNPJ ${esc(nota.loja.cnpj)}</p>
-          <p>${fDayTime.format(new Date(nota.emitidaEm))}</p>
-        </header>
-        ${itemsList(nota)}
-        <footer><span>Total</span>${tag(nota.total, 'tag-lg')}</footer>
-      </article>
+      <h1 class="visually-hidden">Nota de ${esc(nota.loja.nome)}</h1>
+      <article class="cupom">${recibo(nota)}</article>
       <div class="acoes">
         <a class="btn" href="#ler" id="outra">Ler outra nota</a>
         <a class="btn btn-ghost" href="#notas">Ver minhas notas</a>
