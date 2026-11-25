@@ -1,8 +1,8 @@
-import { groupByMonth, normalize, mergeNotes, monthlyTotals, priceHistory, products, toBackup, parseBackup } from './lib.js';
+import { groupByMonth, lastMonths, removeNote, normalize, mergeNotes, monthlyTotals, priceHistory, products, toBackup, parseBackup } from './lib.js';
 import { chaveFromUrl, parseNota } from './parse.js';
-import { getAll, putMany } from './db.js';
+import { getAll, putMany, removeOne } from './db.js';
 import { startCamera, stopCamera, scanImageFile } from './scan.js';
-import { priceChart } from './chart.js';
+import { monthBars, priceChart } from './chart.js';
 
 const $ = (s, root = document) => root.querySelector(s);
 const view = $('#view');
@@ -21,8 +21,9 @@ const fMonth = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric'
 const fMonthOnly = new Intl.DateTimeFormat('pt-BR', { month: 'long' });
 const monthDate = (ym) => new Date(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)) - 1, 15);
 const monthName = (ym) => { const s = fMonth.format(monthDate(ym)); return s[0].toUpperCase() + s.slice(1); };
+const fMonthShort = new Intl.DateTimeFormat('pt-BR', { month: 'short' });
 const thisMonth = () => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit' }).format(new Date()).slice(0, 7);
-const prevMonth = (ym) => { const d = monthDate(ym); d.setMonth(d.getMonth() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
+const perUnit = (u) => (u && u !== 'UN' ? `<span class="por">por ${esc(u.toLowerCase())}</span>` : '');
 
 // The shelf price tag: "R$ 18,99" with small raised cents.
 function tag(cents, size = '') {
@@ -61,10 +62,11 @@ function renderNotas() {
   }
   const totals = monthlyTotals(notes);
   const now = thisMonth();
-  const cur = totals.find((t) => t.month === now)?.total ?? 0;
-  const prev = totals.find((t) => t.month === prevMonth(now));
+  const months = lastMonths(totals, now, 6);
+  const cur = months.at(-1).total;
+  const prev = months.at(-2);
   let compare = '';
-  if (prev) {
+  if (prev.total > 0) {
     const diff = cur - prev.total;
     const name = fMonthOnly.format(monthDate(prev.month));
     compare = diff === 0 ? `Igual a ${name}.` : `${money(Math.abs(diff))} ${diff < 0 ? 'a menos' : 'a mais'} que em ${name}.`;
@@ -75,6 +77,7 @@ function renderNotas() {
       <h1>Gasto em ${esc(fMonthOnly.format(monthDate(now)))}</h1>
       ${tag(cur, 'tag-xl')}
       ${compare ? `<p class="resumo-compara">${compare}</p>` : ''}
+      <figure class="meses"><figcaption class="visually-hidden">Gasto nos últimos 6 meses</figcaption></figure>
     </section>
     ${totals.map(({ month, total }) => `
       <section class="mes">
@@ -87,8 +90,17 @@ function renderNotas() {
               <span class="nota-total">${money(n.total)}</span>
             </summary>
             ${itemsList(n)}
+            <button class="apagar" type="button" data-chave="${esc(n.chave)}">Apagar esta nota</button>
           </details>`).join('')}
       </section>`).join('')}`;
+  $('.meses', view).append(monthBars(months, money, (ym) => fMonthShort.format(monthDate(ym)).replace('.', '')));
+  view.querySelectorAll('.apagar').forEach((b) => b.addEventListener('click', async () => {
+    const n = notes.find((x) => x.chave === b.dataset.chave);
+    if (!n || !confirm(`Apagar a nota de ${n.loja.nome} de ${fDayTime.format(new Date(n.emitidaEm))}? Isso não pode ser desfeito.`)) return;
+    await removeOne(n.chave);
+    notes = removeNote(notes, n.chave);
+    renderNotas();
+  }));
 }
 
 // ---------- Ler nota ----------
@@ -233,7 +245,7 @@ function renderPrecos() {
       <li><a href="${productHref(p.cnpj, p.descNorm)}">
         <span class="prod-nome">${esc(p.label)}</span>
         <span class="prod-loja">${esc(p.loja)}</span>
-        ${tag(p.last, 'tag-sm')}
+        <span class="preco">${tag(p.last, 'tag-sm')}${perUnit(p.unidade)}</span>
         ${p.count > 1 ? change(p.first, p.last) : '<span class="chip">1 compra</span>'}
       </a></li>`).join('');
     $('.status', view).textContent = shown.length ? '' : 'Nenhum produto com esse nome.';
@@ -260,7 +272,7 @@ function renderProduto(cnpj, descNorm) {
       <a class="voltar" href="#precos">Preços</a>
       <h1>${esc(p.label)}</h1>
       <p class="prod-loja">${esc(p.loja)}</p>
-      <div class="produto-preco">${tag(last.valorUnit, 'tag-lg')}<p class="produto-resumo ${r > 0 ? 'up' : r < 0 ? 'down' : ''}">${resumo}</p></div>
+      <div class="produto-preco"><span class="preco">${tag(last.valorUnit, 'tag-lg')}${perUnit(p.unidade)}</span><p class="produto-resumo ${r > 0 ? 'up' : r < 0 ? 'down' : ''}">${resumo}</p></div>
       <figure class="grafico"></figure>
       <h2>Compras</h2>
       <ul class="compras">${[...hist].reverse().map((h) => `<li><span>${fDay.format(new Date(h.date))}</span><span>${money(h.valorUnit)}</span></li>`).join('')}</ul>

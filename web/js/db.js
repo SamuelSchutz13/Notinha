@@ -15,6 +15,16 @@ export async function getAll() {
   });
 }
 
+export async function removeOne(chave) {
+  const db = await open();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('notas', 'readwrite');
+    tx.objectStore('notas').delete(chave);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 // One transaction: either every note is saved or none is.
 export async function putMany(notes) {
   const db = await open();

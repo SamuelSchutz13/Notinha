@@ -38,12 +38,28 @@ export function products(notes) {
       const key = n.loja.cnpj + '|' + descNorm;
       const p = map.get(key) ?? { cnpj: n.loja.cnpj, loja: n.loja.nome, descNorm, label: it.descricao, first: it.valorUnit, count: 0 };
       p.last = it.valorUnit;
+      p.unidade = it.unidade;
       p.count++;
       map.set(key, p);
     }
   }
   return [...map.values()];
 }
+
+// The `count` months ending at `current` ("YYYY-MM"), oldest first; months with no notes are 0.
+export function lastMonths(totals, current, count) {
+  const byMonth = new Map(totals.map((t) => [t.month, t.total]));
+  let y = Number(current.slice(0, 4)), m = Number(current.slice(5, 7));
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    const month = `${y}-${String(m).padStart(2, '0')}`; // taste-skill-ignore: a date, not a label
+    out.unshift({ month, total: byMonth.get(month) ?? 0 });
+    if (--m === 0) { m = 12; y--; }
+  }
+  return out;
+}
+
+export const removeNote = (notes, chave) => notes.filter((n) => n.chave !== chave);
 
 export function groupByMonth(notes) {
   const map = new Map();

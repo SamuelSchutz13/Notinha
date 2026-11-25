@@ -7,6 +7,24 @@ const el = (tag, attrs = {}, text) => {
   return n;
 };
 
+// Monthly spend as bars; the current month (last) carries the price-tag hue, the rest stay neutral.
+export function monthBars(months, fmtMoney, fmtMonth) {
+  const W = 340, H = 132, top = 22, bottom = 22, gap = 10;
+  const bw = (W - gap * (months.length - 1)) / months.length;
+  const max = Math.max(1, ...months.map((m) => m.total));
+  const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'chart bars', role: 'img' });
+  svg.setAttribute('aria-label', months.map((m) => `${fmtMonth(m.month)}: ${fmtMoney(m.total)}`).join(', '));
+  months.forEach((m, i) => {
+    const h = Math.max(m.total ? 3 : 1.5, ((H - top - bottom) * m.total) / max);
+    const x = i * (bw + gap), y = H - bottom - h;
+    const cur = i === months.length - 1;
+    svg.append(el('rect', { x, y, width: bw, height: h, rx: 3, class: cur ? 'bar is-cur' : 'bar' }));
+    svg.append(el('text', { x: x + bw / 2, y: H - 5, 'text-anchor': 'middle', class: cur ? 'chart-date is-cur' : 'chart-date' }, fmtMonth(m.month)));
+    if (cur || m.total === max) svg.append(el('text', { x: x + bw / 2, y: y - 6, 'text-anchor': 'middle', class: 'chart-val' }, fmtMoney(m.total)));
+  });
+  return svg;
+}
+
 export function priceChart(points, fmtMoney, fmtDate) {
   const W = 340, H = 200, P = { l: 10, r: 10, t: 28, b: 52 };
   const base = H - P.b + 8;

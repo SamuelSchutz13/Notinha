@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { groupByMonth, normalize, mergeNotes, monthlyTotals, priceHistory, products, toBackup, parseBackup } from './lib.js';
+import { groupByMonth, lastMonths, removeNote, normalize, mergeNotes, monthlyTotals, priceHistory, products, toBackup, parseBackup } from './lib.js';
 
 const K = (d) => '4226111234567800019065001000001234100001234' + d;
 const loja = { nome: 'MERCADO A', cnpj: '11.111.111/0001-11' };
@@ -79,4 +79,22 @@ test('groupByMonth groups notes by month', () => {
   const g = groupByMonth([a, b, c]);
   assert.deepEqual(g.get('2026-11'), [a, c]);
   assert.deepEqual(g.get('2026-10'), [b]);
+});
+
+test('lastMonths fills missing months with honest zeros, oldest first', () => {
+  const totals = [{ month: '2026-11', total: 500 }, { month: '2026-08', total: 300 }];
+  assert.deepEqual(lastMonths(totals, '2026-11', 4), [
+    { month: '2026-08', total: 300 }, { month: '2026-09', total: 0 }, { month: '2026-10', total: 0 }, { month: '2026-11', total: 500 },
+  ]);
+  assert.deepEqual(lastMonths([], '2026-01', 2).map((m) => m.month), ['2025-12', '2026-01']);
+});
+
+test('products carries the unit of the last purchase', () => {
+  const notes = [nota('1', '2026-10-01T10:00:00-03:00', [{ ...item('BANANA', 649), unidade: 'KG' }])];
+  assert.equal(products(notes)[0].unidade, 'KG');
+});
+
+test('removeNote drops only that chave', () => {
+  const a = nota('1', '2026-11-01T10:00:00-03:00', []), b = nota('2', '2026-11-02T10:00:00-03:00', []);
+  assert.deepEqual(removeNote([a, b], a.chave), [b]);
 });
