@@ -1,4 +1,5 @@
 import { normalize, mergeNotes, monthlyTotals, monthOf, priceHistory, products, toBackup, parseBackup } from './lib.js';
+import { chaveFromUrl, parseNota } from './parse.js';
 import { getAll, putMany } from './db.js';
 import { startCamera, stopCamera, scanImageFile } from './scan.js';
 import { priceChart } from './chart.js';
@@ -98,6 +99,7 @@ function renderLer() {
       <div class="visor"><video muted playsinline aria-label="Imagem da câmera"></video><div class="mira" aria-hidden="true"></div></div>
       <p class="status" role="status">Aponte para o QR Code no rodapé da nota.</p>
       <button class="btn btn-ghost" type="button" id="foto">Usar uma foto da nota</button>
+      <a class="link" href="#colar">Já copiei a nota, quero colar</a>
       <input type="file" id="foto-arquivo" accept="image/*" capture="environment" hidden>
     </section>`;
   const status = $('.status', view);
@@ -109,7 +111,7 @@ function renderLer() {
     if (!file) return;
     status.textContent = 'Procurando o QR Code na foto…';
     const url = await scanImageFile(file).catch(() => null);
-    if (url) consultar(url);
+    if (url) lido(url);
     else status.textContent = 'Não achei um QR Code nessa foto. Tente uma foto mais de perto, com o código inteiro e nítido.';
   };
   const visor = $('.visor', view);
@@ -118,34 +120,76 @@ function renderLer() {
     status.textContent = 'A câmera só funciona com conexão segura (https). Use uma foto da nota.';
     return;
   }
-  startCamera(video, consultar).catch(() => {
+  startCamera(video, lido).catch(() => {
     visor.hidden = true;
     status.textContent = 'Não consegui abrir a câmera. Libere o acesso nas permissões do navegador ou use uma foto da nota.';
   });
 }
 
-async function consultar(url) {
-  view.innerHTML = `<section class="ler"><div class="consultando" role="status"><span class="spinner" aria-hidden="true"></span>Consultando a nota na SEFAZ…</div></section>`;
-  let nota;
-  try {
-    const res = await fetch('/api/nota', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) });
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(body.erro || 'Algo deu errado ao consultar a nota.');
-    nota = body;
-  } catch (e) {
-    const msg = e instanceof TypeError ? 'Sem conexão com a internet. Tente de novo quando voltar.' : e.message;
+// The QR code only gives the link: the SEFAZ page sits behind a captcha, so the user
+// opens it, copies the page and pastes it back here.
+function lido(url) {
+  const chave = chaveFromUrl(url);
+  if (!chave) {
     view.innerHTML = `
       <section class="ler erro">
-        <h1>Nota não lida</h1>
-        <p>${esc(msg)}</p>
-        <a class="btn" href="#ler" id="de-novo">Tentar de novo</a>
+        <h1>QR Code não reconhecido</h1>
+        <p>Esse QR Code não é de uma nota fiscal de Santa Catarina. Por enquanto o Notinha só lê notas de SC.</p>
+        <a class="btn" href="#ler" id="de-novo">Ler outro QR Code</a>
       </section>`;
     $('#de-novo', view).onclick = (ev) => { ev.preventDefault(); renderLer(); };
     return;
   }
+  sessionStorage.setItem('notinha-pendente', JSON.stringify({ url, chave }));
+  location.hash = '#colar';
+}
+
+function renderColar() {
+  const pend = JSON.parse(sessionStorage.getItem('notinha-pendente') ?? 'null');
+  const podeLer = !!navigator.clipboard?.readText;
+  view.innerHTML = `
+    <section class="colar">
+      <h1>${pend ? 'Agora copie a nota' : 'Colar uma nota'}</h1>
+      <ol class="passos">
+        <li><span>${pend ? 'Abra a nota na SEFAZ e passe pela verificação de segurança.' : 'Abra a nota na SEFAZ pelo QR Code e passe pela verificação de segurança.'}</span></li>
+        <li><span>Toque e segure na página, escolha <b>Selecionar tudo</b> e depois <b>Copiar</b>.</span></li>
+        <li><span>Volte para o Notinha e toque em <b>Colar nota</b>.</span></li>
+      </ol>
+      ${pend ? `<a class="btn btn-ghost" href="${esc(pend.url)}" target="_blank" rel="noopener noreferrer">Abrir nota na SEFAZ</a>` : ''}
+      ${podeLer ? '<button class="btn" type="button" id="colar">Colar nota</button>' : ''}
+      <label class="caixa">
+        <span>${podeLer ? 'Ou cole o texto aqui' : 'Cole o texto da nota aqui'}</span>
+        <textarea rows="4" placeholder="Toque e segure para colar"></textarea>
+      </label>
+      <p class="status" role="status"></p>
+    </section>`;
+  const status = $('.status', view);
+  const box = $('textarea', view);
+  const tentar = (text) => {
+    if (!text.trim()) return;
+    try {
+      salvar(parseNota(text, pend?.chave));
+    } catch (e) {
+      status.textContent = e.message;
+    }
+  };
+  box.addEventListener('input', () => tentar(box.value));
+  $('#colar', view)?.addEventListener('click', async () => {
+    try {
+      tentar(await navigator.clipboard.readText());
+    } catch {
+      status.textContent = 'O navegador não deixou ler a área de transferência. Toque e segure na caixa abaixo e escolha Colar.';
+      box.focus();
+    }
+  });
+}
+
+async function salvar(nota) {
   const existed = notes.some((n) => n.chave === nota.chave);
   await putMany([nota]);
   notes = mergeNotes(notes, [nota]);
+  sessionStorage.removeItem('notinha-pendente');
+  history.replaceState(null, '', '#ler');
   view.innerHTML = `
     <section class="lida">
       <p class="lida-aviso" role="status">${existed ? 'Essa nota já estava salva. Nada foi duplicado.' : 'Nota salva.'}</p>
@@ -257,10 +301,11 @@ function route() {
   stopCamera();
   const [name, ...args] = (location.hash.slice(1) || 'notas').split('/');
   document.querySelectorAll('.tabs a').forEach((a) => {
-    const on = a.dataset.tab === name || (name === 'produto' && a.dataset.tab === 'precos');
+    const on = a.dataset.tab === name || (name === 'produto' && a.dataset.tab === 'precos') || (name === 'colar' && a.dataset.tab === 'ler');
     if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
   });
   if (name === 'ler') renderLer();
+  else if (name === 'colar') renderColar();
   else if (name === 'precos') renderPrecos();
   else if (name === 'produto') renderProduto(decodeURIComponent(args[0] ?? ''), decodeURIComponent(args[1] ?? ''));
   else renderNotas();

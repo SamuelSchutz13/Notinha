@@ -1,0 +1,31 @@
+SUPERMERCADO EXEMPLO LTDA
+CNPJ: 12.345.678/0001-90
+RUA DAS FLORES, 100, CENTRO, FLORIANOPOLIS, SC
+CAFE PILAO 500G
+(Código: 7896089012453 )
+Qtde.:1 UN: UN Vl. Unit.:   18,99	Vl. Total
+18,99
+BANANA PRATA KG
+(Código: 2001 )
+Qtde.:1,234 UN: KG Vl. Unit.:   6,49	Vl. Total
+8,01
+LEITE INTEGRAL TIROL 1L
+(Código: 7896256600019 )
+Qtde.:6 UN: UN Vl. Unit.:   5,29	Vl. Total
+31,74
+Qtd. total de itens:3
+Valor total R$:58,74
+Descontos R$:0,00
+Valor a pagar R$:58,74
+Forma de pagamento:	Valor pago R$:
+Cartão de Débito	58,74
+Troco	0,00
+Informações gerais da Nota
+EMISSÃO NORMAL
+Número: 1234 Série: 1 Emissão: 25/11/2026 10:42:17 - Via Consumidor
+Protocolo de Autorização: 342260000123456 25/11/2026 às 10:42:20
+Ambiente de Produção - Versão XML: 4.00 - Versão XSLT: 2.05
+Chave de acesso
+4226 1112 3456 7800 0190 6500 1000 0012 3410 0001 2345
+Consumidor
+CONSUMIDOR NÃO IDENTIFICADO

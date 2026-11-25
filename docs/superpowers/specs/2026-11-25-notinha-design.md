@@ -91,3 +91,17 @@ celular (PWA)                         servidor Go                 SEF/SC
 
 - Confirmar o endereço de produção e o HTML da página da SEF/SC com uma nota real. Se a
   página tiver captcha, a abordagem A precisa ser revista.
+
+## Revisão 2026-11-25: sem servidor
+
+A consulta de produção da SEF/SC (`sat.sef.sc.gov.br/nfce/consulta`) redireciona para
+`SecurityVerify.aspx` com captcha Cloudflare Turnstile. Um servidor não consegue ler a nota,
+e burlar o captcha está fora de questão. Decisão do usuário: manter o app web, sem app nativo.
+
+- O servidor Go sai. O app é só arquivos estáticos (pode ir para o GitHub Pages).
+- Fluxo: ler o QR Code → o app mostra o botão "Abrir nota na SEFAZ" (só para hosts da SEF/SC)
+  → o usuário passa pelo captcha, seleciona tudo e copia → volta e cola no Notinha.
+- O leitor da nota roda no celular, a partir do **texto** copiado (`text/plain`).
+- Chave de acesso: a do texto colado; se não houver, a do QR Code lido antes. Sem nenhuma
+  das duas, a nota não é salva.
+- Formato do texto copiado ainda **não confirmado** com uma nota real: a fixture é provisória.

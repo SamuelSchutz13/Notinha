@@ -205,10 +205,26 @@ main:focus, main:focus-visible { outline: none; } /* focused only to move screen
   background-repeat: no-repeat;
 }
 .ler .status { text-align: center; }
-.consultando { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 80px 0; font-weight: 600; }
-.spinner { width: 22px; height: 22px; border: 3px solid var(--line); border-top-color: var(--ink); border-radius: 50%; animation: gira .8s linear infinite; }
-@keyframes gira { to { transform: rotate(1turn); } }
+.link { justify-self: center; min-height: 44px; display: inline-flex; align-items: center; font-weight: 600; color: var(--muted); }
 .erro { text-align: center; padding-top: 48px; }
+
+/* ---------- Colar ---------- */
+.colar { display: grid; gap: 16px; padding-top: 14px; }
+.passos { list-style: none; counter-reset: passo; margin: 4px 0 6px; padding: 0; display: grid; gap: 14px; }
+.passos li { counter-increment: passo; display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: center; }
+.passos li::before {
+  content: counter(passo);
+  display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%;
+  background: var(--tag); color: var(--tag-ink); font: 700 1.125rem var(--cond);
+}
+.caixa { display: grid; gap: 6px; font-weight: 600; color: var(--muted); }
+.caixa textarea {
+  width: 100%; padding: 12px 14px; resize: vertical;
+  border: 2px dashed var(--line); border-radius: 12px; background: var(--paper); color: var(--ink);
+  font: 400 1rem var(--body);
+}
+.caixa textarea:focus { border-color: var(--ink); border-style: solid; outline: none; }
+.colar .status { color: var(--up); font-weight: 600; }
 .erro p { color: var(--muted); }
 
 .lida { display: grid; gap: 18px; }
