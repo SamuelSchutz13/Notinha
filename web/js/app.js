@@ -1,5 +1,6 @@
 import { groupByMonth, lastMonths, removeNote, sortProducts, priceStats, normalize, mergeNotes, monthlyTotals, priceHistory, products, toBackup, parseBackup } from './lib.js';
 import { chaveFromUrl, parseNota } from './parse.js';
+import { consultaUrl, qrSvg } from './qr.js';
 import { getAll, putMany, removeOne } from './db.js';
 import { startCamera, stopCamera, scanImageFile } from './scan.js';
 import { monthBars, priceChart } from './chart.js';
@@ -44,41 +45,50 @@ const num = (cents) => (cents / 100).toLocaleString('pt-BR', { minimumFractionDi
 // emitidaEm is already Brasília time ("2026-11-25T10:42:17-03:00"): print it as the receipt does.
 const dataHora = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)} ${iso.slice(11, 19)}`;
 
-// Each note gets one of four printer templates, picked from its access key so it never changes.
-const MODELOS = 4;
-const modelo = (chave) => 1 + ([...chave].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % MODELOS);
+// Each note gets one of five printer templates, picked from its access key so it never changes.
+const MODELOS = ['super', 'atacado', 'antiga', 'moderno', 'farmacia'];
+const modelo = (chave) => MODELOS[[...chave].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % MODELOS.length];
+// The store's seal: initials of its first two words that are not legal suffixes.
+const iniciais = (nome) => nome.split(/\s+/).filter((w) => w.length > 2 && !/^(LTDA|EIRELI|S\/?A|ME|EPP)$/i.test(w))
+  .slice(0, 2).map((w) => w[0]).join('');
 
 function recibo(n) {
   const soma = n.itens.reduce((s, i) => s + i.valorTotal, 0);
   const desconto = soma - n.total;
+  const qtd = (q) => String(q).replace('.', ',');
   return `
-    <div class="slip r-v${modelo(n.chave)}">
+    <div class="slip m-${modelo(n.chave)}">
     <div class="recibo" data-ui>
       <header class="r-cab">
+        <span class="r-logo" aria-hidden="true">${esc(iniciais(n.loja.nome))}</span>
         <p class="r-loja">${esc(n.loja.nome)}</p>
-        <p>CNPJ: ${esc(n.loja.cnpj)}</p>
+        <p class="r-cnpj">CNPJ: ${esc(n.loja.cnpj)}</p>
         <p class="r-doc">Documento Auxiliar da Nota Fiscal de Consumidor Eletrônica</p>
       </header>
-      <p class="r-colunas" aria-hidden="true"><span>#</span><span>Descrição</span><span>Vl total</span></p>
+      <p class="r-secao">Itens</p>
+      <p class="r-colunas" aria-hidden="true"><span class="r-n">#</span><span class="r-desc">Descrição</span><span class="r-cod">Código</span><span class="r-qu">Qtd</span><span class="r-unit">Unit.</span><span class="r-vl">Total</span></p>
       <ol class="r-itens">${n.itens.map((it, i) => `
         <li><a href="${productHref(n.loja.cnpj, normalize(it.descricao))}">
           <span class="r-n">${String(i + 1).padStart(3, '0')}</span>
           <span class="r-desc">${esc(it.descricao)}</span>
-          <span class="r-qtd">${it.codigo ? `<span class="r-cod">Cód. ${esc(it.codigo)}</span>` : ''}${esc(String(it.qtd).replace('.', ','))} ${esc(it.unidade)} × ${num(it.valorUnit)}</span>
+          <span class="r-det"><span class="r-cod">${esc(it.codigo ?? '')}</span><span class="r-qu">${esc(qtd(it.qtd))} ${esc(it.unidade)}</span><span class="r-x"> × </span><span class="r-unit">${num(it.valorUnit)}</span></span>
           <span class="r-vl">${num(it.valorTotal)}</span>
         </a></li>`).join('')}
       </ol>
+      <p class="r-secao">Totais</p>
       <dl class="r-tot">
         <div><dt>Qtd. total de itens</dt><dd>${n.itens.length}</dd></div>
         <div><dt>Valor total R$</dt><dd>${num(soma)}</dd></div>
         ${desconto > 0 ? `<div><dt>Descontos R$</dt><dd>${num(desconto)}</dd></div>` : ''}
         <div class="r-pagar"><dt>Valor a pagar R$</dt><dd>${num(n.total)}</dd></div>
       </dl>
+      <p class="r-pago"><span>Total a pagar</span><strong>R$ ${num(n.total)}</strong></p>
       <div class="r-info">
         <p>Emissão: ${dataHora(n.emitidaEm)}</p>
-        <p>Chave de acesso</p>
+        <p class="r-consulte">Consulte pela chave de acesso em sat.sef.sc.gov.br</p>
         <p class="r-chave">${n.chave.match(/.{4}/g).join(' ')}</p>
       </div>
+      <div class="r-qr">${qrSvg(consultaUrl(n.chave), 'QR Code da consulta desta nota')}</div>
       <p class="r-aviso">Reprodução no Notinha. Não é documento fiscal.</p>
     </div>
     </div>`;

@@ -238,83 +238,145 @@ main:focus, main:focus-visible { outline: none; } /* focused only to move screen
 /* ---------- Recibo: the printed NFC-e. Paper is white in both themes, like the real slip. ---------- */
 .slip {
   --papel: #fff; --tinta: #1b1c1f; --apagado: #6a6d74; --sep: #b4b7bd;
+  --mono: ui-monospace, 'Cascadia Mono', Consolas, 'Courier New', monospace; /* the receipt's own face */
   position: relative; max-width: 30rem; margin: 14px auto 26px; background: var(--papel); color: var(--tinta);
 }
 .nota[open] { --card: color-mix(in srgb, var(--ink) 8%, var(--paper)); } /* white slip needs a ground to sit on */
-.nota[open] .slip { margin: 14px 12px 26px; }
-.slip::after { /* torn edge of the roll, drawn per template below */
-  content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 9px;
-}
+.nota[open] .slip { margin: 14px 12px 26px; animation: imprime .45s cubic-bezier(.2, .7, .2, 1); }
+.slip::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 9px; } /* the cut, per template */
 
 .recibo {
   padding: 20px 16px 18px;
-  font: 400 .8125rem/1.5 ui-monospace, 'Cascadia Mono', Consolas, 'Courier New', monospace; /* the receipt's own face */
-  text-transform: uppercase; font-variant-numeric: tabular-nums;
+  font: 400 .8125rem/1.5 var(--mono); text-transform: uppercase; font-variant-numeric: tabular-nums;
 }
 .recibo p { margin: 0; }
 .r-cab { text-align: center; padding-bottom: 12px; }
+.r-logo, .r-secao, .r-pago { display: none; }
 .r-loja { font-weight: 700; font-size: .9375rem; }
 .r-doc { margin-top: 6px !important; font-size: .75rem; color: var(--apagado); text-transform: none; }
 .r-colunas, .r-tot, .r-info { border-top: 1px dashed var(--sep); }
-.r-colunas { display: grid; grid-template-columns: 4ch 1fr auto; gap: 0 8px; padding: 8px 0 4px; font-size: .75rem; color: var(--apagado); }
-.r-itens { list-style: none; margin: 0; padding: 0 0 8px; }
-.r-itens a {
-  display: grid; grid-template-columns: 4ch 1fr auto; gap: 0 8px;
-  padding: 5px 4px; margin: 0 -4px; color: inherit; text-decoration: none; border-radius: 4px;
+.r-colunas { padding: 8px 0 4px; font-size: .75rem; color: var(--apagado); }
+.r-colunas, .r-itens a {
+  display: grid; gap: 0 8px;
+  grid-template-columns: 4ch 1fr auto; grid-template-areas: "n desc vl" ". det .";
 }
+.r-colunas .r-cod, .r-colunas .r-qu, .r-colunas .r-unit { display: none; }
+.r-n { grid-area: n; color: var(--apagado); }
+.r-desc { grid-area: desc; }
+.r-vl { grid-area: vl; text-align: right; }
+.r-det { grid-area: det; color: var(--apagado); font-size: .75rem; }
+.r-det .r-cod { display: block; }
+.r-det .r-cod::before { content: 'Cód. '; }
+.r-det .r-cod:empty { display: none; }
+.r-itens { list-style: none; margin: 0; padding: 0 0 8px; }
+.r-itens a { padding: 5px 4px; margin: 0 -4px; color: inherit; text-decoration: none; border-radius: 4px; }
 .r-itens a:hover { background: #fff2b8; }
-.r-n { color: var(--apagado); }
-.r-desc { grid-column: 2; }
-.r-qtd { grid-column: 2; grid-row: 2; color: var(--apagado); font-size: .75rem; }
-.r-cod { display: block; }
-.r-vl { grid-column: 3; grid-row: 1; text-align: right; }
 .r-tot { margin: 0; padding: 8px 0; }
 .r-tot div { display: flex; justify-content: space-between; gap: 12px; }
 .r-tot dd { margin: 0; }
 .r-pagar { font-weight: 700; font-size: .9375rem; margin-top: 2px; }
 .r-info { padding-top: 8px; text-align: center; }
+.r-consulte { font-size: .6875rem; color: var(--apagado); text-transform: none; }
 .r-chave { font-size: .75rem; word-spacing: .2em; }
-.r-aviso { margin-top: 12px !important; text-align: center; font-size: .6875rem; color: var(--apagado); text-transform: none; }
-.nota[open] .slip { animation: imprime .45s cubic-bezier(.2, .7, .2, 1); }
+.r-qr { display: flex; justify-content: center; padding: 10px 0 2px; }
+.r-qrcode { width: 112px; height: 112px; fill: var(--tinta); }
+.r-aviso { margin-top: 10px !important; text-align: center; font-size: .6875rem; color: var(--apagado); text-transform: none; }
 
-/* 1. Térmica clássica: black ink, dashed rules, saw-tooth cut. */
-.r-v1::after {
+/* 1. Supermercado: round seal with the store's initials, DANFE columns, saw-tooth cut. */
+.m-super .r-logo {
+  display: grid; place-items: center; width: 50px; height: 50px; margin: 0 auto 8px;
+  border: 2.5px solid var(--tinta); border-radius: 50%; font: 700 1.125rem/1 var(--mono); letter-spacing: .04em;
+}
+.m-super .r-colunas, .m-super .r-itens a {
+  gap: 0 6px; grid-template-columns: 4ch 1fr 7ch 5.5ch 6.5ch; /* fixed so every row lines up */
+  grid-template-areas: "n desc desc desc desc" ". cod qu unit vl";
+}
+.m-super .r-colunas .r-cod, .m-super .r-colunas .r-qu, .m-super .r-colunas .r-unit { display: block; }
+.m-super .r-det { display: contents; }
+.m-super .r-cod { grid-area: cod; font-size: .6875rem; color: var(--apagado); }
+.m-super .r-det .r-cod::before { content: none; }
+.m-super .r-qu { grid-area: qu; text-align: right; font-size: .75rem; color: var(--apagado); }
+.m-super .r-unit { grid-area: unit; text-align: right; font-size: .75rem; color: var(--apagado); }
+.m-super .r-x { display: none; }
+.m-super .r-qu, .m-super .r-unit, .m-super .r-vl { white-space: nowrap; }
+.m-super::after {
   background:
     linear-gradient(135deg, var(--papel) 50%, transparent 50%) 0 0 / 12px 9px repeat-x, /* taste-skill-ignore: torn-edge shape */
     linear-gradient(-135deg, var(--papel) 50%, transparent 50%) 0 0 / 12px 9px repeat-x; /* taste-skill-ignore: torn-edge shape */
 }
 
-/* 2. Bobina antiga: faded blue-grey ink, dotted rules, a ragged hand-torn edge. */
-.r-v2 { --tinta: #39405a; --apagado: #7d8399; --sep: #c3c6d1; }
-.r-v2 .recibo { font-family: 'Courier New', Courier, monospace; letter-spacing: .02em; }
-.r-v2 .r-colunas, .r-v2 .r-tot, .r-v2 .r-info { border-top-style: dotted; border-top-width: 2px; }
-.r-v2 .r-loja { font-size: 1rem; }
-.r-v2::after {
+/* 2. Atacado: left-set heading, black section bars, the total in a heavy box, guillotine cut. */
+.m-atacado .recibo { font-weight: 500; }
+.m-atacado .r-cab { text-align: left; }
+.m-atacado .r-loja { font-size: 1.125rem; letter-spacing: .02em; }
+.m-atacado .r-secao {
+  display: block; margin: 10px -16px 6px; padding: 4px 16px;
+  background: var(--tinta); color: var(--papel); font-weight: 700; letter-spacing: .25em;
+}
+.m-atacado .r-colunas, .m-atacado .r-pagar { display: none; }
+.m-atacado .r-tot { border-top: 0; }
+.m-atacado .r-info { border-top: 2px solid var(--tinta); margin-top: 10px; }
+.m-atacado .r-pago {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  margin: 6px 0 0; padding: 10px 12px; border: 3px solid var(--tinta); font-weight: 700;
+}
+.m-atacado .r-pago strong { font-size: 1.5rem; }
+
+/* 3. Bobina antiga: faded blue-grey ink with print-head streaks, a slight skew, a ragged tear. */
+.m-antiga { --tinta: #3b4258; --apagado: #80869b; --sep: #c5c8d2; transform: rotate(-.5deg); }
+.m-antiga .recibo { font-family: 'Courier New', Courier, monospace; letter-spacing: .03em; }
+.m-antiga .r-loja { font-size: 1rem; }
+.m-antiga .r-colunas, .m-antiga .r-tot, .m-antiga .r-info { border-top: 2px dotted var(--sep); }
+.m-antiga::before { /* worn print head: thin pale streaks across the text */
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(transparent 0 41px, rgb(255 255 255 / .55) 41px 44px); /* taste-skill-ignore: print-head streak texture */
+}
+.m-antiga .r-qrcode { opacity: .82; }
+.m-antiga::after {
   background: var(--papel);
   clip-path: polygon(0 0, 100% 0, 100% 40%, 96% 90%, 91% 35%, 86% 75%, 80% 20%, 74% 100%, 69% 45%, 62% 80%, 57% 25%,
     50% 70%, 44% 30%, 39% 95%, 33% 40%, 27% 70%, 21% 15%, 15% 85%, 10% 35%, 5% 75%, 0 30%);
 }
 
-/* 3. Com faixa da loja: store name reversed on a black band, double rules, heavy totals. */
-.r-v3 .r-cab { margin: -20px -16px 12px; padding: 18px 16px 14px; background: #111; color: #fff; }
-.r-v3 .r-loja { font-size: 1.0625rem; letter-spacing: .08em; }
-.r-v3 .r-doc { color: #c9cbd0; }
-.r-v3 .r-colunas, .r-v3 .r-tot, .r-v3 .r-info { border-top: 3px double var(--tinta); }
-.r-v3 .r-pagar { font-size: 1.0625rem; }
-.r-v3::after {
+/* 4. Moderno: a newer till with a proper typeface, a dark total pill and a large QR. */
+.m-moderno { border-radius: 14px 14px 0 0; }
+.m-moderno .recibo { font: 400 .875rem/1.5 var(--body); text-transform: none; padding: 22px 18px 20px; }
+.m-moderno .r-logo {
+  display: grid; place-items: center; width: 46px; height: 46px; margin: 0 auto 10px;
+  border-radius: 12px; background: var(--tinta); color: var(--papel); font: 700 1.25rem var(--cond);
+}
+.m-moderno .r-loja { font: 700 1.25rem/1.2 var(--cond); text-transform: uppercase; }
+.m-moderno .r-colunas, .m-moderno .r-pagar { display: none; }
+.m-moderno .r-itens a { padding: 8px 4px; }
+.m-moderno .r-itens li + li a { border-top: 1px solid #eceef1; border-radius: 0; }
+.m-moderno .r-desc { font-weight: 600; }
+.m-moderno .r-n { font-size: .75rem; padding-top: 2px; }
+.m-moderno .r-tot, .m-moderno .r-info { border-top: 1px solid #e4e6ea; }
+.m-moderno .r-pago {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  margin: 8px 0 6px; padding: 12px 14px; border-radius: 10px; background: var(--tinta); color: var(--papel); font-weight: 600;
+}
+.m-moderno .r-pago strong { font: 700 1.625rem var(--cond); }
+.m-moderno .r-chave { font-family: var(--mono); }
+.m-moderno .r-qrcode { width: 148px; height: 148px; }
+.m-moderno::after {
+  height: 7px;
   background:
-    linear-gradient(135deg, var(--papel) 50%, transparent 50%) 0 0 / 18px 9px repeat-x, /* taste-skill-ignore: torn-edge shape */
-    linear-gradient(-135deg, var(--papel) 50%, transparent 50%) 0 0 / 18px 9px repeat-x; /* taste-skill-ignore: torn-edge shape */
+    linear-gradient(135deg, var(--papel) 50%, transparent 50%) 0 0 / 8px 7px repeat-x, /* taste-skill-ignore: torn-edge shape */
+    linear-gradient(-135deg, var(--papel) 50%, transparent 50%) 0 0 / 8px 7px repeat-x; /* taste-skill-ignore: torn-edge shape */
 }
 
-/* 4. Compacta: a narrow roll, small type, no product codes, perforated cut. */
-.r-v4 { max-width: 21rem; }
-.nota[open] .r-v4 { margin-left: auto; margin-right: auto; width: calc(100% - 24px); }
-.r-v4 .recibo { font-size: .75rem; padding: 16px 12px 14px; }
-.r-v4 .r-cod { display: none; }
-.r-v4 .r-colunas, .r-v4 .r-tot, .r-v4 .r-info { border-top: 2px dotted var(--tinta); }
-.r-v4::after {
-  top: 100%; height: 8px;
+/* 5. Farmácia: a narrow roll in condensed type, no product codes, perforated cut. */
+.m-farmacia { max-width: 20rem; }
+.nota[open] .m-farmacia { margin-left: auto; margin-right: auto; width: calc(100% - 24px); }
+.m-farmacia .recibo { font: 500 .875rem/1.45 var(--cond); letter-spacing: .03em; padding: 16px 12px 14px; }
+.m-farmacia .r-cab { border-bottom: 2px solid var(--tinta); margin-bottom: 6px; }
+.m-farmacia .r-loja { font-size: 1.0625rem; letter-spacing: .12em; }
+.m-farmacia .r-cod { display: none !important; }
+.m-farmacia .r-colunas, .m-farmacia .r-tot, .m-farmacia .r-info { border-top: 2px dotted var(--tinta); }
+.m-farmacia .r-qrcode { width: 96px; height: 96px; }
+.m-farmacia::after {
+  height: 8px;
   background: radial-gradient(circle at 6px 0, var(--papel) 4px, transparent 4.5px) 0 0 / 12px 8px repeat-x; /* taste-skill-ignore: perforation shape */
 }
 

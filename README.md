@@ -33,5 +33,6 @@ node --test web/js/
 
 ## Licenças
 
-- [jsQR](https://github.com/cozmo/jsQR) (Apache-2.0): `web/vendor/`
+- [jsQR](https://github.com/cozmo/jsQR) (Apache-2.0): `web/vendor/jsQR.js`
+- [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (MIT, Kazuhiko Arase): `web/vendor/qrcode.mjs`
 - Fonte Barlow (SIL OFL 1.1): `web/fonts/`
