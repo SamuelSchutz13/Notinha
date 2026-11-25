@@ -44,10 +44,15 @@ const num = (cents) => (cents / 100).toLocaleString('pt-BR', { minimumFractionDi
 // emitidaEm is already Brasília time ("2026-11-25T10:42:17-03:00"): print it as the receipt does.
 const dataHora = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)} ${iso.slice(11, 19)}`;
 
+// Each note gets one of four printer templates, picked from its access key so it never changes.
+const MODELOS = 4;
+const modelo = (chave) => 1 + ([...chave].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % MODELOS);
+
 function recibo(n) {
   const soma = n.itens.reduce((s, i) => s + i.valorTotal, 0);
   const desconto = soma - n.total;
   return `
+    <div class="slip r-v${modelo(n.chave)}">
     <div class="recibo" data-ui>
       <header class="r-cab">
         <p class="r-loja">${esc(n.loja.nome)}</p>
@@ -59,7 +64,7 @@ function recibo(n) {
         <li><a href="${productHref(n.loja.cnpj, normalize(it.descricao))}">
           <span class="r-n">${String(i + 1).padStart(3, '0')}</span>
           <span class="r-desc">${esc(it.descricao)}</span>
-          <span class="r-qtd">${it.codigo ? `Cód. ${esc(it.codigo)} · ` : ''}${esc(String(it.qtd).replace('.', ','))} ${esc(it.unidade)} × ${num(it.valorUnit)}</span>
+          <span class="r-qtd">${it.codigo ? `<span class="r-cod">Cód. ${esc(it.codigo)}</span>` : ''}${esc(String(it.qtd).replace('.', ','))} ${esc(it.unidade)} × ${num(it.valorUnit)}</span>
           <span class="r-vl">${num(it.valorTotal)}</span>
         </a></li>`).join('')}
       </ol>
@@ -75,6 +80,7 @@ function recibo(n) {
         <p class="r-chave">${n.chave.match(/.{4}/g).join(' ')}</p>
       </div>
       <p class="r-aviso">Reprodução no Notinha. Não é documento fiscal.</p>
+    </div>
     </div>`;
 }
 

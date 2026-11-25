@@ -127,16 +127,17 @@ main:focus, main:focus-visible { outline: none; } /* focused only to move screen
 .status { color: var(--muted); }
 
 /* ---------- Receipt paper ---------- */
-.nota, .cupom {
+.nota {
+  --card: var(--paper);
   position: relative;
-  background: var(--paper);
+  background: var(--card);
   margin-bottom: 18px;
 }
-.nota::after, .cupom::after { /* serrilhado da bobina */
+.nota::after { /* serrilhado da bobina */
   content: ''; position: absolute; left: 0; right: 0; bottom: -8px; height: 8px;
   background:
-    linear-gradient(135deg, var(--paper) 50%, transparent 50%) 0 0 / 12px 8px repeat-x, /* taste-skill-ignore: shape (torn edge / scan corners), not a colour fade */
-    linear-gradient(-135deg, var(--paper) 50%, transparent 50%) 0 0 / 12px 8px repeat-x; /* taste-skill-ignore: shape (torn edge / scan corners), not a colour fade */
+    linear-gradient(135deg, var(--card) 50%, transparent 50%) 0 0 / 12px 8px repeat-x, /* taste-skill-ignore: shape (torn edge / scan corners), not a colour fade */
+    linear-gradient(-135deg, var(--card) 50%, transparent 50%) 0 0 / 12px 8px repeat-x; /* taste-skill-ignore: shape (torn edge / scan corners), not a colour fade */
 }
 
 /* ---------- Notas ---------- */
@@ -230,31 +231,42 @@ main:focus, main:focus-visible { outline: none; } /* focused only to move screen
 
 .lida { display: grid; gap: 18px; }
 .lida-aviso { font-weight: 600; text-align: center; padding-top: 6px; }
-.cupom { margin-bottom: 26px; animation: imprime .5s cubic-bezier(.2, .7, .2, 1); transform-origin: top; }
+.cupom { animation: imprime .5s cubic-bezier(.2, .7, .2, 1); }
 @keyframes imprime { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 -20px 0); } }
 .acoes { display: grid; gap: 10px; }
 
-/* ---------- Recibo: the printed NFC-e, reproduced as the thermal printer sets it ---------- */
+/* ---------- Recibo: the printed NFC-e. Paper is white in both themes, like the real slip. ---------- */
+.slip {
+  --papel: #fff; --tinta: #1b1c1f; --apagado: #6a6d74; --sep: #b4b7bd;
+  position: relative; max-width: 30rem; margin: 14px auto 26px; background: var(--papel); color: var(--tinta);
+}
+.nota[open] { --card: color-mix(in srgb, var(--ink) 8%, var(--paper)); } /* white slip needs a ground to sit on */
+.nota[open] .slip { margin: 14px 12px 26px; }
+.slip::after { /* torn edge of the roll, drawn per template below */
+  content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 9px;
+}
+
 .recibo {
-  max-width: 30rem; margin: 0 auto; padding: 20px 16px 18px;
+  padding: 20px 16px 18px;
   font: 400 .8125rem/1.5 ui-monospace, 'Cascadia Mono', Consolas, 'Courier New', monospace; /* the receipt's own face */
-  text-transform: uppercase; color: var(--ink); font-variant-numeric: tabular-nums;
+  text-transform: uppercase; font-variant-numeric: tabular-nums;
 }
 .recibo p { margin: 0; }
 .r-cab { text-align: center; padding-bottom: 12px; }
 .r-loja { font-weight: 700; font-size: .9375rem; }
-.r-doc { margin-top: 6px !important; font-size: .75rem; color: var(--muted); text-transform: none; }
-.r-colunas, .r-tot, .r-info { border-top: 1px dashed var(--line); }
-.r-colunas { display: grid; grid-template-columns: 4ch 1fr auto; gap: 0 8px; padding: 8px 0 4px; font-size: .75rem; color: var(--muted); }
+.r-doc { margin-top: 6px !important; font-size: .75rem; color: var(--apagado); text-transform: none; }
+.r-colunas, .r-tot, .r-info { border-top: 1px dashed var(--sep); }
+.r-colunas { display: grid; grid-template-columns: 4ch 1fr auto; gap: 0 8px; padding: 8px 0 4px; font-size: .75rem; color: var(--apagado); }
 .r-itens { list-style: none; margin: 0; padding: 0 0 8px; }
 .r-itens a {
   display: grid; grid-template-columns: 4ch 1fr auto; gap: 0 8px;
-  padding: 5px 4px; margin: 0 -4px; text-decoration: none; border-radius: 4px;
+  padding: 5px 4px; margin: 0 -4px; color: inherit; text-decoration: none; border-radius: 4px;
 }
-.r-itens a:hover { background: color-mix(in srgb, var(--tag) 26%, transparent); }
-.r-n { color: var(--muted); }
+.r-itens a:hover { background: #fff2b8; }
+.r-n { color: var(--apagado); }
 .r-desc { grid-column: 2; }
-.r-qtd { grid-column: 2; grid-row: 2; color: var(--muted); font-size: .75rem; }
+.r-qtd { grid-column: 2; grid-row: 2; color: var(--apagado); font-size: .75rem; }
+.r-cod { display: block; }
 .r-vl { grid-column: 3; grid-row: 1; text-align: right; }
 .r-tot { margin: 0; padding: 8px 0; }
 .r-tot div { display: flex; justify-content: space-between; gap: 12px; }
@@ -262,8 +274,49 @@ main:focus, main:focus-visible { outline: none; } /* focused only to move screen
 .r-pagar { font-weight: 700; font-size: .9375rem; margin-top: 2px; }
 .r-info { padding-top: 8px; text-align: center; }
 .r-chave { font-size: .75rem; word-spacing: .2em; }
-.r-aviso { margin-top: 12px !important; text-align: center; font-size: .6875rem; color: var(--muted); text-transform: none; }
-.nota[open] .recibo { animation: imprime .45s cubic-bezier(.2, .7, .2, 1); }
+.r-aviso { margin-top: 12px !important; text-align: center; font-size: .6875rem; color: var(--apagado); text-transform: none; }
+.nota[open] .slip { animation: imprime .45s cubic-bezier(.2, .7, .2, 1); }
+
+/* 1. Térmica clássica: black ink, dashed rules, saw-tooth cut. */
+.r-v1::after {
+  background:
+    linear-gradient(135deg, var(--papel) 50%, transparent 50%) 0 0 / 12px 9px repeat-x, /* taste-skill-ignore: torn-edge shape */
+    linear-gradient(-135deg, var(--papel) 50%, transparent 50%) 0 0 / 12px 9px repeat-x; /* taste-skill-ignore: torn-edge shape */
+}
+
+/* 2. Bobina antiga: faded blue-grey ink, dotted rules, a ragged hand-torn edge. */
+.r-v2 { --tinta: #39405a; --apagado: #7d8399; --sep: #c3c6d1; }
+.r-v2 .recibo { font-family: 'Courier New', Courier, monospace; letter-spacing: .02em; }
+.r-v2 .r-colunas, .r-v2 .r-tot, .r-v2 .r-info { border-top-style: dotted; border-top-width: 2px; }
+.r-v2 .r-loja { font-size: 1rem; }
+.r-v2::after {
+  background: var(--papel);
+  clip-path: polygon(0 0, 100% 0, 100% 40%, 96% 90%, 91% 35%, 86% 75%, 80% 20%, 74% 100%, 69% 45%, 62% 80%, 57% 25%,
+    50% 70%, 44% 30%, 39% 95%, 33% 40%, 27% 70%, 21% 15%, 15% 85%, 10% 35%, 5% 75%, 0 30%);
+}
+
+/* 3. Com faixa da loja: store name reversed on a black band, double rules, heavy totals. */
+.r-v3 .r-cab { margin: -20px -16px 12px; padding: 18px 16px 14px; background: #111; color: #fff; }
+.r-v3 .r-loja { font-size: 1.0625rem; letter-spacing: .08em; }
+.r-v3 .r-doc { color: #c9cbd0; }
+.r-v3 .r-colunas, .r-v3 .r-tot, .r-v3 .r-info { border-top: 3px double var(--tinta); }
+.r-v3 .r-pagar { font-size: 1.0625rem; }
+.r-v3::after {
+  background:
+    linear-gradient(135deg, var(--papel) 50%, transparent 50%) 0 0 / 18px 9px repeat-x, /* taste-skill-ignore: torn-edge shape */
+    linear-gradient(-135deg, var(--papel) 50%, transparent 50%) 0 0 / 18px 9px repeat-x; /* taste-skill-ignore: torn-edge shape */
+}
+
+/* 4. Compacta: a narrow roll, small type, no product codes, perforated cut. */
+.r-v4 { max-width: 21rem; }
+.nota[open] .r-v4 { margin-left: auto; margin-right: auto; width: calc(100% - 24px); }
+.r-v4 .recibo { font-size: .75rem; padding: 16px 12px 14px; }
+.r-v4 .r-cod { display: none; }
+.r-v4 .r-colunas, .r-v4 .r-tot, .r-v4 .r-info { border-top: 2px dotted var(--tinta); }
+.r-v4::after {
+  top: 100%; height: 8px;
+  background: radial-gradient(circle at 6px 0, var(--papel) 4px, transparent 4.5px) 0 0 / 12px 8px repeat-x; /* taste-skill-ignore: perforation shape */
+}
 
 /* ---------- Preços ---------- */
 .precos { display: grid; gap: 16px; padding-top: 14px; }
@@ -378,4 +431,3 @@ dialog::backdrop { background: rgb(0 0 0 / .45); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
-@media (prefers-color-scheme: dark) { .r-itens a:hover { background: color-mix(in srgb, var(--tag) 12%, transparent); } }
