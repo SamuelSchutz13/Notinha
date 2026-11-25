@@ -1,4 +1,4 @@
-import { normalize, mergeNotes, monthlyTotals, monthOf, priceHistory, products, toBackup, parseBackup } from './lib.js';
+import { groupByMonth, normalize, mergeNotes, monthlyTotals, priceHistory, products, toBackup, parseBackup } from './lib.js';
 import { chaveFromUrl, parseNota } from './parse.js';
 import { getAll, putMany } from './db.js';
 import { startCamera, stopCamera, scanImageFile } from './scan.js';
@@ -69,7 +69,7 @@ function renderNotas() {
     const name = fMonthOnly.format(monthDate(prev.month));
     compare = diff === 0 ? `Igual a ${name}.` : `${money(Math.abs(diff))} ${diff < 0 ? 'a menos' : 'a mais'} que em ${name}.`;
   }
-  const byMonth = Map.groupBy(notes, (n) => monthOf(n.emitidaEm));
+  const byMonth = groupByMonth(notes);
   view.innerHTML = `
     <section class="resumo">
       <h1>Gasto em ${esc(fMonthOnly.format(monthDate(now)))}</h1>
@@ -129,6 +129,7 @@ function renderLer() {
 // The QR code only gives the link: the SEFAZ page sits behind a captcha, so the user
 // opens it, copies the page and pastes it back here.
 function lido(url) {
+  stopCamera(); // a photo can be picked while the live camera is still running
   const chave = chaveFromUrl(url);
   if (!chave) {
     view.innerHTML = `

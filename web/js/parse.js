@@ -5,9 +5,12 @@ const SEF_SC_HOSTS = new Set(['sat.sef.sc.gov.br', 'hom.sat.sef.sc.gov.br']);
 
 const clean = (s) => String(s ?? '').replace(/R\$/g, '').replace(/\s+/g, '').replace(/\./g, '');
 
+// Unit prices may carry 3+ decimals ("18,990"): round half up to cents with integer math.
 export function parseCents(s) {
-  const m = /^(\d+)(?:,(\d{1,2}))?$/.exec(clean(s));
-  return m ? Number(m[1]) * 100 + Number((m[2] ?? '').padEnd(2, '0')) : null;
+  const m = /^(\d+)(?:,(\d+))?$/.exec(clean(s));
+  if (!m) return null;
+  const d = (m[2] ?? '').padEnd(3, '0');
+  return Number(m[1]) * 100 + Number(d.slice(0, 2)) + (Number(d[2]) >= 5 ? 1 : 0);
 }
 
 export function parseQty(s) {
@@ -37,6 +40,11 @@ export function parseNota(rawText, chaveLida = null) {
     itens.push(item);
   }
   if (!itens.length) throw new Error('Não achei os itens da nota. Copie a página inteira (Selecionar tudo) e cole de novo.');
+  // A partial copy must never be saved as if it were the whole receipt.
+  const declarados = /Qtd\. total de itens:\s*(\d+)/.exec(text);
+  if (declarados && Number(declarados[1]) !== itens.length) {
+    throw new Error(`A cópia está incompleta: a nota tem ${declarados[1]} itens e eu achei ${itens.length}. Copie a página inteira (Selecionar tudo) e cole de novo.`);
+  }
 
   const chaveTexto = /Chave de acesso[:\s]*((?:\d[ .]*){44})/i.exec(text)?.[1].replace(/\D/g, '');
   const chave = chaveTexto || chaveLida;
@@ -44,7 +52,8 @@ export function parseNota(rawText, chaveLida = null) {
 
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
   const iCnpj = lines.findIndex((l) => /CNPJ/i.test(l));
-  const cnpj = /\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/.exec(lines[iCnpj] ?? '')?.[0] ?? '';
+  const cnpj = /\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/.exec(lines[iCnpj] ?? '')?.[0];
+  if (!cnpj) throw new Error('Não achei o CNPJ da loja no começo da nota. Copie a página inteira e cole de novo.');
   const nome = iCnpj > 0 ? lines[iCnpj - 1] : 'Loja sem nome';
 
   const em = /Emissão:\s*(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}:\d{2}:\d{2})/.exec(text);

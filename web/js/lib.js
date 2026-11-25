@@ -45,14 +45,31 @@ export function products(notes) {
   return [...map.values()];
 }
 
+export function groupByMonth(notes) {
+  const map = new Map();
+  for (const n of notes) {
+    const m = monthOf(n.emitidaEm);
+    map.set(m, [...(map.get(m) ?? []), n]);
+  }
+  return map;
+}
+
 export const toBackup = (notes) => JSON.stringify({ app: 'notinha', v: 1, notes });
+
+const isStr = (v) => typeof v === 'string';
+const validItem = (it) => it && isStr(it.descricao) && isStr(it.unidade) && Number.isFinite(it.qtd) &&
+  Number.isInteger(it.valorUnit) && Number.isInteger(it.valorTotal);
+
+// Everything the screens read must be present: a bad note stored once would break every load.
+export const validNota = (n) => /^\d{44}$/.test(n?.chave) && isStr(n.loja?.nome) && isStr(n.loja?.cnpj) &&
+  isStr(n.emitidaEm) && /^\d{4}-\d{2}-\d{2}T/.test(n.emitidaEm) && !Number.isNaN(Date.parse(n.emitidaEm)) &&
+  Number.isInteger(n.total) && Array.isArray(n.itens) && n.itens.every(validItem);
 
 export function parseBackup(text) {
   const bad = new Error('Arquivo de backup inválido');
   let data;
   try { data = JSON.parse(text); } catch { throw bad; }
-  const ok = data?.app === 'notinha' && data.v === 1 && Array.isArray(data.notes) &&
-    data.notes.every((n) => /^\d{44}$/.test(n?.chave) && Array.isArray(n.itens));
+  const ok = data?.app === 'notinha' && data.v === 1 && Array.isArray(data.notes) && data.notes.every(validNota);
   if (!ok) throw bad;
   return data.notes;
 }

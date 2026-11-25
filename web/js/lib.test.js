@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalize, mergeNotes, monthlyTotals, priceHistory, products, toBackup, parseBackup } from './lib.js';
+import { groupByMonth, normalize, mergeNotes, monthlyTotals, priceHistory, products, toBackup, parseBackup } from './lib.js';
 
 const K = (d) => '4226111234567800019065001000001234100001234' + d;
 const loja = { nome: 'MERCADO A', cnpj: '11.111.111/0001-11' };
@@ -65,4 +65,18 @@ test('parseBackup rejects invalid', () => {
     JSON.stringify({ app: 'notinha', v: 1, notes: [{ chave: K('1') }] })]) {
     assert.throws(() => parseBackup(bad), /Arquivo de backup inválido/);
   }
+});
+
+test('parseBackup rejects notes with malformed fields', () => {
+  const good = nota('1', '2026-11-01T10:00:00-03:00', [item('X', 1)], 1);
+  const bads = [{ ...good, loja: undefined }, { ...good, emitidaEm: 'ontem' }, { ...good, itens: [null] },
+    { ...good, total: '10' }, { ...good, itens: [{ ...item('X', 1), valorUnit: 1.5 }] }];
+  for (const b of bads) assert.throws(() => parseBackup(toBackup([b])), /Arquivo de backup inválido/);
+});
+
+test('groupByMonth groups notes by month', () => {
+  const a = nota('1', '2026-11-01T10:00:00-03:00', []), b = nota('2', '2026-10-01T10:00:00-03:00', []), c = nota('3', '2026-11-09T10:00:00-03:00', []);
+  const g = groupByMonth([a, b, c]);
+  assert.deepEqual(g.get('2026-11'), [a, c]);
+  assert.deepEqual(g.get('2026-10'), [b]);
 });
