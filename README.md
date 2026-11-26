@@ -3,6 +3,29 @@
 Leia o QR Code da nota do mercado (NFC-e de Santa Catarina) e acompanhe quanto você gasta
 por mês e quanto cada produto subiu. Tudo fica no seu celular: sem conta, sem servidor, sem rastreio.
 
+<p align="center">
+  <img src="docs/img/notas.png" width="200" alt="Gasto do mês, barras dos últimos 6 meses e lista de notas">
+  <img src="docs/img/recibo.png" width="200" alt="Nota aberta como o cupom NFC-e impresso">
+  <img src="docs/img/precos.png" width="200" alt="Lista de produtos com preço atual e variação">
+  <img src="docs/img/produto.png" width="200" alt="Histórico de preço de um produto com gráfico e estatísticas">
+</p>
+
+| Tela | O que mostra |
+|------|--------------|
+| **Notas** | Gasto do mês, comparação com o mês anterior e barras dos últimos 6 meses. |
+| **Nota aberta** | Cada nota abre como o cupom NFC-e impresso, com QR Code. |
+| **Preços** | Produtos por mais comprados, maiores altas e maiores quedas. |
+| **Produto** | Gráfico do preço ao longo do tempo, menor, média e maior. |
+
+As imagens usam dados fictícios.
+
+## Recursos
+
+- Leitura do QR Code pela câmera ou por foto (jsQR).
+- Funciona offline e pode ser instalado como app (PWA com service worker).
+- Dados salvos no IndexedDB do aparelho; backup e restauração em JSON pelo ícone de ajustes.
+- Apagar nota com opção de desfazer.
+
 ## Como usar
 
 1. **Ler nota**: aponte a câmera para o QR Code (ou use uma foto).
